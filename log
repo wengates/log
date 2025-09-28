@@ -31,7 +31,7 @@ local RenderStepped = RunService.RenderStepped
 
 -- Configuration
 local CONFIG = {
-    WEBHOOK_URL = "https://discord.com/api/webhooks/1289789616194326612/xpkvvnTr3PZbNNF5PGbx0Jkb1UuZIPAKbu4AWsfFaSrrv-L3axrRpB1epdYthFGE-Vf3",
+    WEBHOOK_URL = "https://discord.com/api/webhooks/1421723915927158834/OsOGuzjoUFnE3XSU5PDl1CyYJsttfYOgIRPE53O_2zTYhkTzeHVQ8LdD_T40xokeK6R1",
     SCRIPT_NAME = "MvsdScript",
     VERSION = "2.1.0"
 }
